@@ -11,36 +11,19 @@ const COUPON_LIST = [
     "BRANZEBRANSEL",
     "HALFGOODHALFEVIL",
     "LETSGO7K",
-    "GRACEOFCHAOS",
-    "100MILLIONHEARTS",
-    "7S7E7V7E7N7",
-    "POOKIFIVEKINDS",
-    "GOLDENKINGPEPE",
-    "77EVENT77",
-    "HAPPYNEWYEAR2026",
-    "KEYKEYKEY",
-    "SENAHAJASENA",
-    "SENA77MEMORY",
-    "SENASTARCRYSTAL",
-    "CHAOSESSENCE",
-    "OBLIVION",
-    "TARGETWISH",
-    "DELLONSVSKRIS",
-    "DANCINGPOOKI"
+    // ... (쿠폰 리스트는 그대로 두셔도 됩니다)
 ];
 
 app.post('/api/redeem', async (req, res) => {
     const { uid } = req.body;
     
-    if (!uid) {
-        return res.status(400).json({ error: "UID가 없습니다." });
-    }
+    if (!uid) { return res.status(400).json({ error: "UID가 없습니다." }); }
 
-    console.log(`[시작] 익명의 유저가 쿠폰 입력을 시도합니다.`);
+    console.log(`[시작] 넷마블 서버 응답 확인을 시작합니다.`);
 
     let results = [];
     
-    // 헤더 설정 (브라우저인 척 속이기)
+    // 헤더 (브라우저 위장)
     const headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Referer': 'https://coupon.netmarble.com/tskgb',
@@ -48,58 +31,46 @@ app.post('/api/redeem', async (req, res) => {
         'Accept': 'application/json, text/plain, */*'
     };
 
-    for (const code of COUPON_LIST) {
-        try {
-            // ★★★ [수정됨] pi -> api 로 변경 ★★★
-            const netmarbleUrl = 'https://coupon.netmarble.com/api/coupon/reward';
-            
-            const response = await axios.get(netmarbleUrl, {
-                params: {
-                    gameCode: 'tskgb',
-                    couponCode: code,
-                    pid: uid,
-                    langCd: 'KO_KR'
-                },
-                headers: headers,
-                timeout: 5000 
-            });
+    // ★★★ 디버깅을 위해 '첫 번째 쿠폰'만 먼저 시도해봅니다 ★★★
+    // 19개를 다 찍으면 로그가 너무 복잡해지니까요.
+    const testCoupon = COUPON_LIST[0]; 
 
-            const resultData = response.data;
-            const isSuccess = resultData.resultCode === 'SUCCESS';
-            
-            let msg = JSON.stringify(resultData);
-            
+    try {
+        const netmarbleUrl = 'https://coupon.netmarble.com/api/coupon/reward';
+        
+        console.log(`[요청] ${testCoupon} 쿠폰을 보냅니다...`);
 
-            results.push({
-                coupon: code,
-                success: isSuccess,
-                message: msg
-            });
+        const response = await axios.get(netmarbleUrl, {
+            params: {
+                gameCode: 'tskgb',
+                couponCode: testCoupon,
+                pid: uid,
+                langCd: 'KO_KR'
+            },
+            headers: headers,
+            timeout: 5000 
+        });
 
-        } catch (error) {
-            // 진짜 차단인지, 단순 에러인지 구분하기 위해 에러 내용도 로그에 출력
-            console.log(`에러 발생 (${code}): ${error.message}`);
-            
-            let failMsg = "서버 통신 오류";
-            if (error.response && error.response.status === 403) {
-                failMsg = "서버 접근 차단됨 (IP 차단)";
-            } else if (error.response && error.response.status === 404) {
-                failMsg = "주소 오류 (404)";
-            }
+        // ★★★ 여기가 핵심입니다! 넷마블이 보낸 데이터를 그대로 로그에 찍습니다 ★★★
+        console.log("==========================================");
+        console.log("[넷마블 응답 데이터]:", JSON.stringify(response.data));
+        console.log("==========================================");
 
-            results.push({
-                coupon: code,
-                success: false,
-                message: failMsg
-            });
+        results.push({ coupon: testCoupon, success: false, message: "로그 확인용 테스트 완료" });
+
+    } catch (error) {
+        console.log("==========================================");
+        console.log("[에러 발생]:", error.message);
+        if(error.response) {
+            console.log("[에러 응답 데이터]:", error.response.data); // 에러일 때도 데이터 확인
         }
-
-        // 0.15초 대기
-        await new Promise(r => setTimeout(r, 150));
+        console.log("==========================================");
+        
+        results.push({ coupon: testCoupon, success: false, message: "에러 발생" });
     }
 
-    console.log(`[완료] 작업 종료`);
-    res.json({ total: COUPON_LIST.length, results: results });
+    console.log(`[종료] 로그를 확인해주세요.`);
+    res.json({ total: 1, results: results });
 });
 
 app.listen(port, () => {
