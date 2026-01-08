@@ -1,36 +1,34 @@
 const express = require('express');
 const axios = require('axios');
 const app = express();
+
 const port = process.env.PORT || 3000;
 
-app.use(express.static('public')); // public 폴더의 html 파일을 보여줌
+app.use(express.static('public'));
 app.use(express.json());
 
-// ▼▼▼ 여기에 쿠폰 코드를 계속 추가하세요 (콤마로 구분) ▼▼▼
 const COUPON_LIST = [
-        "BRANZEBRANSEL",
-        "HALFGOODHALFEVIL",
-        "LETSGO7K",
-        "GRACEOFCHAOS",
-        "100MILLIONHEARTS",
-        "7S7E7V7E7N7",
-        "POOKIFIVEKINDS",
-        "GOLDENKINGPEPE",
-        "77EVENT77",
-        "HAPPYNEWYEAR2026",
-        "KEYKEYKEY",
-        "SENAHAJASENA",
-        "SENA77MEMORY",
-        "SENASTARCRYSTAL",
-        "CHAOSESSENCE",
-        "OBLIVION",
-        "TARGETWISH",
-        "DELLONSVSKRIS",
-        "DANCINGPOOKI"
+    "BRANZEBRANSEL",
+    "HALFGOODHALFEVIL",
+    "LETSGO7K",
+    "GRACEOFCHAOS",
+    "100MILLIONHEARTS",
+    "7S7E7V7E7N7",
+    "POOKIFIVEKINDS",
+    "GOLDENKINGPEPE",
+    "77EVENT77",
+    "HAPPYNEWYEAR2026",
+    "KEYKEYKEY",
+    "SENAHAJASENA",
+    "SENA77MEMORY",
+    "SENASTARCRYSTAL",
+    "CHAOSESSENCE",
+    "OBLIVION",
+    "TARGETWISH",
+    "DELLONSVSKRIS",
+    "DANCINGPOOKI"
 ];
-// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-// API: 클라이언트로부터 UID를 받아 쿠폰 일괄 입력 시작
 app.post('/api/redeem', async (req, res) => {
     const { uid } = req.body;
     
@@ -38,52 +36,56 @@ app.post('/api/redeem', async (req, res) => {
         return res.status(400).json({ error: "UID가 없습니다." });
     }
 
-    console.log(`[시작] 익명의 사용자 쿠폰 입력 진입`); // UID 변수 제거
+    console.log(`[시작] 익명의 유저가 쿠폰 입력을 시도합니다.`);
 
-    // 실시간 처리는 복잡하므로, 여기서는 서버가 다 처리하고 결과를 한 번에 주는 방식 사용
-    // (쿠폰이 100개면 약 50초 소요될 수 있음 -> 타임아웃 방지 필요하지만 일단 심플하게 구현)
-    
     let results = [];
     
-    // 비동기 루프 (순차 처리)
-    for (const [index, code] of COUPON_LIST.entries()) {
+    // ★★★ [중요] 넷마블을 속이기 위한 가짜 신분증(헤더) ★★★
+    const headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://coupon.netmarble.com/tskgb',
+        'Origin': 'https://coupon.netmarble.com',
+        'Accept': 'application/json, text/plain, */*'
+    };
+
+    for (const code of COUPON_LIST) {
         try {
-            // 넷마블 서버로 요청 (GET 방식)
             const netmarbleUrl = 'https://coupon.netmarble.com/pi/coupon/reward';
             const response = await axios.get(netmarbleUrl, {
                 params: {
-                    gameCode: 'tskgb', // 세븐나이츠 리버스 코드
+                    gameCode: 'tskgb',
                     couponCode: code,
                     pid: uid,
                     langCd: 'KO_KR'
                 },
-                // 타임아웃 설정 (5초)
+                headers: headers, // 여기에 가짜 신분증 제출
                 timeout: 5000 
             });
 
             const resultData = response.data;
             const isSuccess = resultData.resultCode === 'SUCCESS';
             
-            // 결과 기록
+            // 넷마블 응답 메시지가 없을 경우를 대비한 처리
+            let msg = resultData.rewardMsg || resultData.resultMsg;
+            if (!msg) msg = isSuccess ? "지급 완료" : "결과 알 수 없음";
+
             results.push({
                 coupon: code,
                 success: isSuccess,
-                message: resultData.rewardMsg || resultData.resultMsg || "결과 알 수 없음"
+                message: msg
             });
 
-            console.log(`[${index+1}/${COUPON_LIST.length}] ${code} -> ${isSuccess ? '성공' : '실패'}`);
-
         } catch (error) {
-            console.error(`[에러] ${code}: ${error.message}`);
+            console.log(`에러 발생 (${code}): ${error.message}`);
             results.push({
                 coupon: code,
                 success: false,
-                message: "서버 통신 오류"
+                message: "서버 차단됨 (잠시 후 다시 시도)"
             });
         }
 
-        // ★ 중요: 넷마블 서버 차단 방지를 위한 딜레이 (0.5초)
-        await new Promise(r => setTimeout(r, 200));
+        // 0.15초 대기
+        await new Promise(r => setTimeout(r, 150));
     }
 
     console.log(`[완료] 작업 종료`);
@@ -91,5 +93,5 @@ app.post('/api/redeem', async (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`서버가 http://localhost:${port} 에서 실행 중입니다.`);
+    console.log(`서버가 포트 ${port}에서 실행 중입니다.`);
 });
