@@ -67,8 +67,8 @@ app.post('/api/redeem', async (req, res) => {
             const resultData = response.data;
             const isSuccess = resultData.resultCode === 'SUCCESS';
             
-            let msg = resultData.rewardMsg || resultData.resultMsg;
-            if (!msg) msg = isSuccess ? "지급 완료" : "결과 알 수 없음";
+            let msg = JSON.stringify(resultData);
+            
 
             results.push({
                 coupon: code,
