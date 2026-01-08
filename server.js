@@ -8,10 +8,25 @@ app.use(express.json());
 
 // ▼▼▼ 여기에 쿠폰 코드를 계속 추가하세요 (콤마로 구분) ▼▼▼
 const COUPON_LIST = [
-    "WELCOMESK",    // 예시 1
-    "GIFT2024",     // 예시 2
-    "SEVENKNIGHTS", // 예시 3
-    // 계속 추가 가능...
+        "BRANZEBRANSEL",
+        "HALFGOODHALFEVIL",
+        "LETSGO7K",
+        "GRACEOFCHAOS",
+        "100MILLIONHEARTS",
+        "7S7E7V7E7N7",
+        "POOKIFIVEKINDS",
+        "GOLDENKINGPEPE",
+        "77EVENT77",
+        "HAPPYNEWYEAR2026",
+        "KEYKEYKEY",
+        "SENAHAJASENA",
+        "SENA77MEMORY",
+        "SENASTARCRYSTAL",
+        "CHAOSESSENCE",
+        "OBLIVION",
+        "TARGETWISH",
+        "DELLONSVSKRIS",
+        "DANCINGPOOKI"
 ];
 // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
@@ -23,7 +38,7 @@ app.post('/api/redeem', async (req, res) => {
         return res.status(400).json({ error: "UID가 없습니다." });
     }
 
-    console.log(`[시작] 사용자 ${uid}에 대해 쿠폰 ${COUPON_LIST.length}개 입력 시도`);
+    console.log(`[시작] 익명의 사용자 쿠폰 입력 진입`); // UID 변수 제거
 
     // 실시간 처리는 복잡하므로, 여기서는 서버가 다 처리하고 결과를 한 번에 주는 방식 사용
     // (쿠폰이 100개면 약 50초 소요될 수 있음 -> 타임아웃 방지 필요하지만 일단 심플하게 구현)
@@ -71,7 +86,7 @@ app.post('/api/redeem', async (req, res) => {
         await new Promise(r => setTimeout(r, 200));
     }
 
-    console.log(`[완료] 사용자 ${uid} 작업 종료`);
+    console.log(`[완료] 작업 종료`);
     res.json({ total: COUPON_LIST.length, results: results });
 });
 
