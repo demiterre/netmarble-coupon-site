@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>세나 리버스 쿠폰 자동지급</title>
+    <style>
+        body { font-family: sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; background: #f0f2f5; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+        h2 { margin-top: 0; color: #333; }
+        p { color: #666; font-size: 14px; margin-bottom: 25px; }
+        input { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 15px; background: #4a90e2; color: white; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #357abd; }
+        button:disabled { background: #ccc; }
+        #logs { margin-top: 20px; text-align: left; max-height: 300px; overflow-y: auto; font-size: 13px; }
+        .log-item { padding: 8px; border-bottom: 1px solid #eee; }
+        .success { color: green; font-weight: bold; }
+        .fail { color: red; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>🎁 세나 리버스 쿠폰함</h2>
+        <p>회원번호(PID)만 입력하세요.<br>최신 쿠폰을 자동으로 모두 넣어드립니다.</p>
+        
+        <input type="text" id="uid" placeholder="회원번호 입력 (예: 1234...)">
+        <button id="btn" onclick="run()">🚀 보상 전체 받기</button>
+        
+        <div id="logs"></div>
+    </div>
+
+    <script>
+        async function run() {
+            const uid = document.getElementById('uid').value.trim();
+            const btn = document.getElementById('btn');
+            const logs = document.getElementById('logs');
+
+            if (!uid) { alert("회원번호를 입력하세요!"); return; }
+
+            btn.disabled = true;
+            btn.innerText = "보상 수령 중... (잠시만 기다리세요)";
+            logs.innerHTML = "<div style='text-align:center; padding:10px;'>방문자 인증 중...</div>";
+
+            try {
+                // 쿠키 없이 UID만 보냅니다
+                const res = await fetch('/api/redeem', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uid: uid })
+                });
+                
+                const data = await res.json();
+                logs.innerHTML = "";
+                
+                let successCnt = 0;
+                data.results.forEach(r => {
+                    const div = document.createElement('div');
+                    div.className = 'log-item';
+                    let status = "<span class='fail'>[실패]</span>";
+                    
+                    if (r.message.includes('성공') || r.message.includes('이미')) {
+                        status = "<span class='success'>[완료]</span>";
+                        successCnt++;
+                    }
+                    div.innerHTML = `${status} <b>${r.coupon}</b> : ${r.message}`;
+                    logs.appendChild(div);
+                });
+                
+                alert(`작업 완료! 총 ${successCnt}개의 쿠폰 처리가 끝났습니다.`);
+
+            } catch (err) {
+                logs.innerHTML = `<div class="fail">서버 오류: ${err.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "🚀 보상 전체 받기";
+            }
+        }
+    </script>
+</body>
+</html>
